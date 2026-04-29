@@ -142,3 +142,41 @@ def create_quote(
         return response.json()
     except RequestException as e:
         raise RuntimeError(f"Failed to create quote: {str(e)}")
+
+
+@mcp.tool()
+def send_quote_by_email(
+    quote_id: str,
+    send_to: List[str],
+    email_title: str,
+    email_body: Optional[str] = None,
+    copy_to_self: Optional[bool] = None,
+) -> Dict:
+    """
+    Send a quote by email.
+
+    OAuth scope required: client_invoices.write
+    Endpoint: POST /v2/quotes/{id}/send
+
+    Args:
+        quote_id: UUID of the quote.
+        send_to: List of recipient email addresses.
+        email_title: Email subject line.
+        email_body: Optional message body.
+        copy_to_self: Whether to send a copy to the authenticated user (default true).
+    """
+    url = f"{qonto_mcp.thirdparty_host}/v2/quotes/{quote_id}/send"
+    payload: Dict = {"send_to": send_to, "email_title": email_title}
+    if email_body is not None:
+        payload["email_body"] = email_body
+    if copy_to_self is not None:
+        payload["copy_to_self"] = copy_to_self
+
+    try:
+        response = requests.post(url, headers=qonto_mcp.headers, json=payload)
+        response.raise_for_status()
+        if response.status_code == 204 or not response.content:
+            return {"status": "sent"}
+        return response.json()
+    except RequestException as e:
+        raise RuntimeError(f"Failed to send quote: {str(e)}")

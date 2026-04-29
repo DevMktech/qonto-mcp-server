@@ -329,3 +329,41 @@ def upload_supplier_invoice(
             return response.json()
     except (RequestException, OSError) as e:
         raise RuntimeError(f"Failed to upload supplier invoice: {str(e)}")
+
+
+@mcp.tool()
+def send_client_invoice_by_email(
+    invoice_id: str,
+    send_to: List[str],
+    email_title: str,
+    email_body: Optional[str] = None,
+    copy_to_self: Optional[bool] = None,
+) -> Dict:
+    """
+    Send a client invoice by email.
+
+    OAuth scope required: client_invoices.write
+    Endpoint: POST /v2/client_invoices/{id}/send
+
+    Args:
+        invoice_id: UUID of the client invoice.
+        send_to: List of recipient email addresses.
+        email_title: Email subject line.
+        email_body: Optional message body.
+        copy_to_self: Whether to send a copy to the authenticated user (default true).
+    """
+    url = f"{qonto_mcp.thirdparty_host}/v2/client_invoices/{invoice_id}/send"
+    payload: Dict = {"send_to": send_to, "email_title": email_title}
+    if email_body is not None:
+        payload["email_body"] = email_body
+    if copy_to_self is not None:
+        payload["copy_to_self"] = copy_to_self
+
+    try:
+        response = requests.post(url, headers=qonto_mcp.headers, json=payload)
+        response.raise_for_status()
+        if response.status_code == 204 or not response.content:
+            return {"status": "sent"}
+        return response.json()
+    except RequestException as e:
+        raise RuntimeError(f"Failed to send client invoice: {str(e)}")
