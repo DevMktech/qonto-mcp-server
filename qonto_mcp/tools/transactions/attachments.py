@@ -1,4 +1,6 @@
-from typing import Optional
+from typing import Dict, Optional
+import os
+import mimetypes
 import requests
 from requests.exceptions import RequestException
 import qonto_mcp
@@ -40,3 +42,34 @@ def list_qonto_transaction_attachments(
         return response.json()
     except RequestException as e:
         raise RuntimeError(f"Failed to fetch transaction attachments {str(e)}")
+
+
+@mcp.tool()
+def upload_transaction_attachment(transaction_id: str, file_path: str) -> Dict:
+    """
+    Upload an attachment (JPEG, PNG or PDF) to a transaction.
+
+    OAuth scope required: attachment.write
+    Endpoint: POST /v2/transactions/{id}/attachments (multipart/form-data)
+
+    Note: the uploaded file is processed in the background, so the attachment
+    may not appear immediately on the transaction.
+
+    Args:
+        transaction_id: UUID of the transaction.
+        file_path: Local filesystem path to the file to attach.
+    """
+    url = f"{qonto_mcp.thirdparty_host}/v2/transactions/{transaction_id}/attachments"
+    filename = os.path.basename(file_path)
+    mime_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+
+    try:
+        with open(file_path, "rb") as fh:
+            files = {"file": (filename, fh, mime_type)}
+            response = requests.post(url, headers=qonto_mcp.headers, files=files)
+            response.raise_for_status()
+            if response.status_code == 204 or not response.content:
+                return {"status": "uploaded"}
+            return response.json()
+    except (RequestException, OSError) as e:
+        raise RuntimeError(f"Failed to upload transaction attachment: {str(e)}")
