@@ -1,6 +1,6 @@
 import requests
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from requests.exceptions import RequestException
 
 import qonto_mcp
@@ -124,3 +124,94 @@ def get_credit_notes(
         return response.json()
     except RequestException as e:
         raise RuntimeError(f"Failed to fetch credit notes {str(e)}")
+
+
+@mcp.tool()
+def create_client_invoice(
+    client_id: str,
+    issue_date: str,
+    due_date: str,
+    currency: str,
+    payment_methods: Dict,
+    items: List[Dict],
+    number: Optional[str] = None,
+    status: Optional[str] = None,
+    upload_id: Optional[str] = None,
+    performance_start_date: Optional[str] = None,
+    performance_end_date: Optional[str] = None,
+    purchase_order: Optional[str] = None,
+    terms_and_conditions: Optional[str] = None,
+    header: Optional[str] = None,
+    footer: Optional[str] = None,
+    discount: Optional[Dict] = None,
+    settings: Optional[Dict] = None,
+    report_einvoicing: Optional[bool] = None,
+    payment_reporting: Optional[Dict] = None,
+    welfare_fund: Optional[Dict] = None,
+    withholding_tax: Optional[Dict] = None,
+    stamp_duty_amount: Optional[str] = None,
+) -> Dict:
+    """
+    Create a client invoice on Qonto.
+
+    OAuth scope required: client_invoice.write
+    Endpoint: POST /v2/client_invoices
+
+    Args:
+        client_id: UUID of the client.
+        issue_date: ISO date (YYYY-MM-DD).
+        due_date: ISO date (YYYY-MM-DD).
+        currency: ISO 4217 alpha-3 (e.g. "EUR").
+        payment_methods: Dict containing at least {"iban": "..."}.
+        items: Line items. Each requires title, quantity, unit_price ({value, currency})
+            and vat_rate. Optional per-item: description, unit, discount,
+            vat_exemption_reason.
+        number: Invoice number (required only if automatic numbering disabled).
+        status: "draft" or "unpaid" (default "unpaid").
+        upload_id: Optional UUID of a previously uploaded attachment.
+        performance_start_date, performance_end_date: Optional performance period.
+        purchase_order: Optional PO reference (max 40 chars).
+        terms_and_conditions: Optional (max 525 chars).
+        header, footer: Optional text fields.
+        discount: Optional global discount {"type": "percentage"|"absolute", "value": "..."}.
+        settings: Organization property overrides for this invoice.
+        report_einvoicing, payment_reporting, welfare_fund, withholding_tax,
+        stamp_duty_amount: Italian/Spanish-specific options.
+    """
+    url = f"{qonto_mcp.thirdparty_host}/v2/client_invoices"
+    payload: Dict = {
+        "client_id": client_id,
+        "issue_date": issue_date,
+        "due_date": due_date,
+        "currency": currency,
+        "payment_methods": payment_methods,
+        "items": items,
+    }
+    optional_fields = {
+        "number": number,
+        "status": status,
+        "upload_id": upload_id,
+        "performance_start_date": performance_start_date,
+        "performance_end_date": performance_end_date,
+        "purchase_order": purchase_order,
+        "terms_and_conditions": terms_and_conditions,
+        "header": header,
+        "footer": footer,
+        "discount": discount,
+        "settings": settings,
+        "report_einvoicing": report_einvoicing,
+        "payment_reporting": payment_reporting,
+        "welfare_fund": welfare_fund,
+        "withholding_tax": withholding_tax,
+        "stamp_duty_amount": stamp_duty_amount,
+    }
+    for key, value in optional_fields.items():
+        if value is not None:
+            payload[key] = value
+
+    try:
+        response = requests.post(url, headers=qonto_mcp.headers, json=payload)
+        response.raise_for_status()
+        return response.json()
+    except RequestException as e:
+        raise RuntimeError(f"Failed to create client invoice: {str(e)}")
