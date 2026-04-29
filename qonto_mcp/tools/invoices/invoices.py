@@ -215,3 +215,67 @@ def create_client_invoice(
         return response.json()
     except RequestException as e:
         raise RuntimeError(f"Failed to create client invoice: {str(e)}")
+
+
+@mcp.tool()
+def create_credit_note(
+    invoice_id: str,
+    issue_date: str,
+    currency: str,
+    reason: str,
+    items: List[Dict],
+    number: Optional[str] = None,
+    terms_and_conditions: Optional[str] = None,
+    contact_email: Optional[str] = None,
+    discount: Optional[Dict] = None,
+    welfare_fund: Optional[Dict] = None,
+    withholding_tax: Optional[Dict] = None,
+    stamp_duty_amount: Optional[str] = None,
+) -> Dict:
+    """
+    Create a credit note (avoir) on Qonto.
+
+    OAuth scope required: client_invoices.write
+    Endpoint: POST /v2/credit_notes
+
+    Args:
+        invoice_id: UUID of the original client invoice.
+        issue_date: ISO date (YYYY-MM-DD).
+        currency: ISO 4217 alpha-3.
+        reason: Reason for the credit note (max 500 chars).
+        items: Line items. Each requires title, quantity, unit_price ({value, currency})
+            and vat_rate. Optional per-item: description, unit, discount,
+            vat_exemption_reason.
+        number: Credit note number (required only if automatic numbering disabled).
+        terms_and_conditions: Optional (max 525 chars).
+        contact_email: Optional contact email.
+        discount: Optional global discount {"type": "...", "value": "..."}.
+        welfare_fund, withholding_tax, stamp_duty_amount: Italian/Spanish-specific.
+    """
+    url = f"{qonto_mcp.thirdparty_host}/v2/credit_notes"
+    payload: Dict = {
+        "invoice_id": invoice_id,
+        "issue_date": issue_date,
+        "currency": currency,
+        "reason": reason,
+        "items": items,
+    }
+    optional_fields = {
+        "number": number,
+        "terms_and_conditions": terms_and_conditions,
+        "contact_email": contact_email,
+        "discount": discount,
+        "welfare_fund": welfare_fund,
+        "withholding_tax": withholding_tax,
+        "stamp_duty_amount": stamp_duty_amount,
+    }
+    for key, value in optional_fields.items():
+        if value is not None:
+            payload[key] = value
+
+    try:
+        response = requests.post(url, headers=qonto_mcp.headers, json=payload)
+        response.raise_for_status()
+        return response.json()
+    except RequestException as e:
+        raise RuntimeError(f"Failed to create credit note: {str(e)}")
