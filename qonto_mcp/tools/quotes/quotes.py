@@ -7,6 +7,72 @@ from qonto_mcp import mcp
 
 
 @mcp.tool()
+def list_quotes(
+    status: Optional[List[str]] = None,
+    created_at_from: Optional[str] = None,
+    created_at_to: Optional[str] = None,
+    page: Optional[int] = None,
+    per_page: Optional[int] = None,
+    sort_by: Optional[str] = None,
+) -> Dict:
+    """
+    List quotes from Qonto.
+
+    OAuth scope required: client_invoices.read
+    Endpoint: GET /v2/quotes
+
+    Args:
+        status: Filter by status. Allowed: "pending_approval", "approved", "canceled".
+        created_at_from: ISO 8601 datetime lower bound.
+        created_at_to: ISO 8601 datetime upper bound.
+        page: Page number.
+        per_page: Items per page (default 100, max 500).
+        sort_by: "created_at:desc" or "created_at:asc".
+    """
+    url = f"{qonto_mcp.thirdparty_host}/v2/quotes"
+    params: Dict = {}
+    if status:
+        params["filter[status][]"] = status
+    if created_at_from is not None:
+        params["filter[created_at_from]"] = created_at_from
+    if created_at_to is not None:
+        params["filter[created_at_to]"] = created_at_to
+    if page is not None:
+        params["page"] = page
+    if per_page is not None:
+        params["per_page"] = per_page
+    if sort_by is not None:
+        params["sort_by"] = sort_by
+
+    try:
+        response = requests.get(url, headers=qonto_mcp.headers, params=params)
+        response.raise_for_status()
+        return response.json()
+    except RequestException as e:
+        raise RuntimeError(f"Failed to list quotes: {str(e)}")
+
+
+@mcp.tool()
+def get_quote(quote_id: str) -> Dict:
+    """
+    Retrieve a specific quote from Qonto.
+
+    OAuth scope required: client_invoices.read
+    Endpoint: GET /v2/quotes/{id}
+
+    Args:
+        quote_id: UUID of the quote.
+    """
+    url = f"{qonto_mcp.thirdparty_host}/v2/quotes/{quote_id}"
+    try:
+        response = requests.get(url, headers=qonto_mcp.headers)
+        response.raise_for_status()
+        return response.json()
+    except RequestException as e:
+        raise RuntimeError(f"Failed to get quote: {str(e)}")
+
+
+@mcp.tool()
 def create_quote(
     client_id: str,
     issue_date: str,
