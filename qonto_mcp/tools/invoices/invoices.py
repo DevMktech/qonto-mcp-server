@@ -279,3 +279,53 @@ def create_credit_note(
         return response.json()
     except RequestException as e:
         raise RuntimeError(f"Failed to create credit note: {str(e)}")
+
+
+@mcp.tool()
+def upload_supplier_invoice(
+    file_path: str,
+    idempotency_key: Optional[str] = None,
+    source: Optional[str] = "integration",
+    skip_attachment_matcher: Optional[bool] = None,
+) -> Dict:
+    """
+    Upload a supplier invoice (PDF/image) to Qonto.
+
+    OAuth scope required: supplier_invoice.write
+    Endpoint: POST /v2/supplier_invoices/bulk (multipart/form-data)
+
+    Args:
+        file_path: Local filesystem path to the file to upload (PDF, PNG, JPG…).
+        idempotency_key: Optional UUID to deduplicate uploads.
+        source: Origin of the upload. Allowed values include "pay_by_invoice",
+            "supplier_invoices", "integration" (default).
+        skip_attachment_matcher: Optional boolean to skip attachment matching.
+
+    Note: the endpoint always returns HTTP 200; check the "errors" array in the
+    response to confirm success.
+    """
+    import os
+    import mimetypes
+
+    url = f"{qonto_mcp.thirdparty_host}/v2/supplier_invoices/bulk"
+    filename = os.path.basename(file_path)
+    mime_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+
+    try:
+        with open(file_path, "rb") as fh:
+            files = [("supplier_invoices[][file]", (filename, fh, mime_type))]
+            data: Dict = {}
+            if idempotency_key is not None:
+                data["supplier_invoices[][idempotency_key]"] = idempotency_key
+            if source is not None:
+                data["source"] = source
+            if skip_attachment_matcher is not None:
+                data["skip_attachment_matcher"] = str(skip_attachment_matcher).lower()
+
+            response = requests.post(
+                url, headers=qonto_mcp.headers, files=files, data=data
+            )
+            response.raise_for_status()
+            return response.json()
+    except (RequestException, OSError) as e:
+        raise RuntimeError(f"Failed to upload supplier invoice: {str(e)}")
