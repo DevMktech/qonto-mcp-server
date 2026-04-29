@@ -15,6 +15,7 @@ import qonto_mcp.tools.memberships
 import qonto_mcp.tools.invoices
 import qonto_mcp.tools.statements
 import qonto_mcp.tools.clients
+import qonto_mcp.tools.quotes
 import qonto_mcp.tools.requests
 
 # Load environment variables
