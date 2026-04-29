@@ -162,20 +162,44 @@ For example, this is a full configuration:
 
 ## Available Tools
 
-This MCP server provides the following tools for interacting with your Qonto account:
+This MCP server provides the following tools for interacting with your Qonto account.
 
-- **Organization Info**: Get details about your Qonto organization
-- **Account Management**: Access account information and balances
-- **Transaction History**: Retrieve and analyze transaction data
-- **Business Operations**: Access business-related financial data
+### Read
+
+- **Organization** — `get_qonto_organization`
+- **Memberships** — `list_qonto_memberships`
+- **Labels** — `list_qonto_labels`, `get_qonto_label`
+- **Transactions** — `get_qonto_transactions`, `get_qonto_transaction`, `list_qonto_transaction_attachments`
+- **Attachments** — `get_qonto_attachment`
+- **Statements** — `list_qonto_statements`, `get_qonto_statement`
+- **Beneficiaries** — `list_qonto_beneficiaries`, `get_qonto_beneficiary`
+- **External transfers** — `list_qonto_external_transfers`, `get_qonto_external_transfer`
+- **Requests** — `list_qonto_requests`, `get_qonto_request`
+- **Clients** — `get_clients`, `get_client`
+- **Quotes** — `list_quotes`, `get_quote`
+- **Invoices** — `get_client_invoices`, `get_supplier_invoices`, `get_credit_notes`
+
+### Write
+
+- **Clients** — `create_client` (scope `client.write`)
+- **Quotes** — `create_quote`, `send_quote_by_email` (scope `client_invoice.write`)
+- **Client invoices** — `create_client_invoice`, `send_client_invoice_by_email` (scope `client_invoice.write`)
+- **Credit notes** — `create_credit_note` (scope `client_invoices.write`)
+- **Supplier invoices** — `upload_supplier_invoice` (multipart, scope `supplier_invoice.write`)
+- **Transaction attachments** — `upload_transaction_attachment` (multipart, scope `attachment.write`)
+- **SEPA beneficiaries** — `create_sepa_beneficiary` (scope `payment.write`)
+- **SEPA transfers** — `verify_sepa_payee`, `create_sepa_transfer` (scope `payment.write`, SCA required for untrusted beneficiaries)
+
+> Each write tool's docstring lists its exact required/optional fields. Make sure the corresponding OAuth scopes are activated on your API key.
 
 ## Configuration
 
 ### Environment Variables
 
 - `QONTO_API_KEY`: Your Qonto API key (required)
-- `QONTO_ORGANIZATION_ID`: Your organization ID (required)  
+- `QONTO_ORGANIZATION_ID`: Your organization ID (required)
 - `QONTO_THIRDPARTY_HOST`: API host URL (defaults to https://thirdparty.qonto.com)
+- `QONTO_STAGING_TOKEN`: Staging token (only for sandbox at `https://thirdparty-sandbox.staging.qonto.co`)
 
 ### Transport Options
 
